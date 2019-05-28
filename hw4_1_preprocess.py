@@ -27,14 +27,18 @@ word_index["<UNUSED>"] = 3
 
 
 
+# train_labels: numpy.ndarray (25000,) binary
 
 train_data = tf.keras.preprocessing.sequence.pad_sequences(train_data,
                                                         value=word_index["<PAD>"],
                                                         padding='post',
                                                         maxlen=120)
+# numpy.ndarray (25000, 120)
+
 
 test_data = tf.keras.preprocessing.sequence.pad_sequences(test_data,
                                                        value=word_index["<PAD>"],
                                                        padding='post',
                                                        maxlen=120)
+# numpy.ndarray (25000, 120)
 
