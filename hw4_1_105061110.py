@@ -36,17 +36,9 @@ class LSTM():
         self.sess = tf.Session(graph=g)
 
 
-        # with tf.variable_scope('foo'):
-        #     # tf.reset_default_graph() 
-        #     self.graph = tf.Graph()
-        #     tf.set_random_seed(random_seed)
-        #     self.build_model()
-        #     self.init_op = tf.global_variables_initializer()
-        #     self.sess = tf.Session(graph=self.graph)
-
     def build_model(self):
-        x = tf.placeholder(tf.float32, shape=[None, self.n_steps, self.n_inputs])
-        y = tf.placeholder(tf.float32, shape=[None, self.n_classes])
+        tf_x = tf.placeholder(tf.float32, shape=[None, self.n_steps, self.n_inputs], name='tf_x')
+        tf_y = tf.placeholder(tf.float32, shape=[None, self.n_classes], name='tf_y')
         weights = {
             # (28, 128)
             'in' : tf.Variable(tf.random_normal([self.n_inputs, self.n_hidden_units])),
@@ -61,13 +53,13 @@ class LSTM():
             'out' : tf.Variable(tf.constant(0.1, shape=[self.n_classes, ]))
         }
 
-        # def RNN(X, weights, biases):
         #  X: (128 batch, 28 steps, 28 inputs)
-        X = tf.reshape(x, [-1, self.n_inputs]) # (128,*28, 28 inputs)
+        X = tf.reshape(tf_x, [-1, self.n_inputs]) # (128,*28, 28 inputs)
         X_in = tf.matmul(X, weights['in']) + biases['in'] # (128*28, 128 hidden)
         X_in = tf.reshape(X_in, [-1, self.n_steps, self.n_hidden_units]) # (128 batch, 28 steps, 128 hidden)
         
 
+        # tf.reset_default_graph()
         lstm_cell = tf.contrib.rnn.BasicLSTMCell(
             self.n_hidden_units, forget_bias=1.0, state_is_tuple=True)
         # lstm cell divided into two parts (c_state, m_state)
@@ -79,14 +71,14 @@ class LSTM():
 
         pred = tf.matmul(states[1], weights['out']) + biases['out']
         cost = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y),
+            tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=tf_y),
             name='cost'
         )
-        train_op = tf.train.AdamOptimizer(lr).minimize(cost, name='train_op')
+        train_op = tf.train.AdamOptimizer(self.lr).minimize(cost, name='train_op')
 
         correct_pred = tf.equal(
             tf.argmax(pred, 1),
-            tf.argmax(y, 1),
+            tf.argmax(tf_y, 1),
             name='correct_preds'
         )
         accuracy = tf.reduce_mean(
@@ -102,14 +94,13 @@ class LSTM():
             batch_xs, batch_ys = mnist.train.next_batch(self.batch_size)
             batch_xs = batch_xs.reshape([self.batch_size, self.n_steps, self.n_inputs])
             self.sess.run('train_op', feed_dict={
-                x: batch_xs,
-                y: batch_ys
+                'tf_x:0': batch_xs,
+                'tf_y:0': batch_ys
             })
             if step % 20 == 0:
                 print(self.sess.run('accuracy', feed_dict={
-                x: batch_xs,
-                y: batch_ys
-            }))
+                    'tf_x:0': batch_xs,
+                    'tf_y:0': batch_ys}))
             step += 1
 
 
