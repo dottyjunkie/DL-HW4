@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
@@ -15,7 +16,8 @@ class RNN():
                     n_steps = 28,
                     n_hidden_units = 128,
                     n_classes = 10,
-                    cell = 'GRU'):
+                    cell = 'GRU',
+                    embedding=False):
 
         tf.set_random_seed(42)
         self.lr = lr
@@ -26,8 +28,8 @@ class RNN():
         self.n_hidden_units = n_hidden_units    # neurons in hidden layer
         self.n_classes = n_classes              # labels
         self.cell = cell
-        self.embedding = False
-        self.embedding_size = 128
+        self.embedding = embedding
+        self.embedding_size = 256
         
         self.build_model()
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
@@ -56,10 +58,10 @@ class RNN():
             word_ids: a sentence represented in an integer vector.
             '''
             word_embeddings = tf.Variable(tf.random_uniform([10000, self.embedding_size], -1, 1), name='word_embeddings')
-            embedded_word_ids = tf.nn.embedding_lookup(word_embeddings, x)
+            embedded_word_ids = tf.nn.embedding_lookup(word_embeddings, tf.cast(x, tf.int32))
 
             # Modify the original dimension of the weights.
-            weights['in'] = tf.Variable(tf.random_normal([embedding_size, self.n_hidden_units]))
+            weights['in'] = tf.Variable(tf.random_normal([self.embedding_size, self.n_hidden_units]))
 
         def build_cell(X, weights, biases):
             # transpose the inputs shape to
@@ -131,48 +133,110 @@ class RNN():
         self.accuracy_op = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 
-    def train(self, mnist):
+    def train(self, data):
         self.sess.run(tf.global_variables_initializer())
         step = 0
         while step * self.batch_size < self.training_iters:
-            batch_xs, batch_ys = mnist.train.next_batch(self.batch_size)
-            batch_xs = batch_xs.reshape([self.batch_size, self.n_steps, self.n_inputs])
-            self.sess.run(self.train_op, feed_dict={
-                'x:0': batch_xs,
-                'y:0': batch_ys
-            })
-            if step % 20 == 0:
-                print(self.sess.run(self.accuracy_op, feed_dict={
-                'x:0': batch_xs,
-                'y:0': batch_ys
-                }))
+
+            # MNIST case, data=mnist
+            if self.n_classes == 10: 
+                batch_xs, batch_ys = data.train.next_batch(self.batch_size)
+                batch_xs = batch_xs.reshape([self.batch_size, self.n_steps, self.n_inputs])
+                feed = {
+                    'x:0' : batch_xs,
+                    'y:0' : batch_ys,
+                }
+                self.sess.run(self.train_op, feed_dict=feed)
+                if step % 20 == 0:
+                    print(self.sess.run(self.accuracy_op, feed_dict=feed))
+
+            # HW
+            else:
+                batch_gen = batch_generator(
+                    data[0], # X
+                    data[1], # y
+                    batch_size=self.batch_size,
+                    shuffle=True
+                )
+                for i, (batch_x, batch_y) in enumerate(batch_gen):
+                    feed = {
+                        'x:0' : batch_x,
+                        'y:0' : batch_y,
+                    }
+                    self.sess.run(self.train_op, feed_dict=feed)
+                    if step % 20 == 0:
+                        print(self.sess.run(self.accuracy_op, feed_dict=feed))
+
             step += 1
 
-if __name__ == "__main__":
-    # does-it-run test 
-    mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-    lstm = RNN( lr = 0.001,
-                training_iters = 50000,
-                batch_size = 128,
-                n_inputs = 28,
-                n_steps = 28,
-                n_hidden_units = 128,
-                n_classes = 10,
-                cell = 'GRU')
-    lstm.train(mnist)
-    del lstm
+def one_hot(dict_size, target):
+    embedding = np.identity(dict_size, dtype=np.int32)
+    dim = len(target.shape)
 
-    # with open('data.pickle','rb') as f:
-    #     train_data, train_labels, test_data, test_labels = pickle.load(f)
-    # print(train_data.shape)
-    # lstm = RNN( lr = 0.001,
+    if dim == 1:
+        result = np.zeros((len(target), dict_size))
+        for w in range(len(target)):
+            result[w,:] = embedding[target[w],:]
+        return result
+
+    elif dim == 2:
+        batch_size = target.shape[0]
+        sentence_len = target.shape[1]
+        result = np.zeros((batch_size, sentence_len, dict_size))
+        for s in range(batch_size):
+            for w in range(sentence_len):
+                result[s,w,:] = embedding[target[s,w],:]
+        return result
+
+def batch_generator(X, y, batch_size=128, shuffle=False, random_seed=42):
+    idx = np.arange(y.shape[0])
+    y = one_hot(2, y)
+    if shuffle:
+        rng = np.random.RandomState(random_seed)
+        rng.shuffle(idx)
+        X = X[idx]
+        y = y[idx]
+    
+    for i in range(0, X.shape[0], batch_size):
+        yield (np.expand_dims(X[i:i+batch_size, :], axis=2), y[i:i+batch_size, :])
+
+
+if __name__ == "__main__":
+    # ''' does-it-run test ''' 
+    # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+    # rnn = RNN( lr = 0.001,
     #             training_iters = 50000,
     #             batch_size = 128,
-    #             n_inputs = 10000, # dim of word vector
-    #             n_steps = 120,    # number of words in a sentence
+    #             n_inputs = 28,
+    #             n_steps = 28,
     #             n_hidden_units = 128,
-    #             n_classes = 2,    # pos or neg
+    #             n_classes = 10,
     #             cell = 'GRU')
-    # lstm.train(mnist)
-    # del lstm
+    # rnn.train(mnist)
+    # del rnn
+
+    with open('data.pickle','rb') as f:
+        train_data, train_labels, test_data, test_labels = pickle.load(f)
+    # print(train_labels.shape)
+
+    # batch_gen = batch_generator(
+    #     train_data, # X
+    #     train_labels, # y
+    #     batch_size=256,
+    #     shuffle=True
+    # )
+    # for i, (batch_x, batch_y) in enumerate(batch_gen):
+    #     print(batch_x.shape, batch_y.shape)
+    rnn = RNN( lr = 0.001,
+                training_iters = 50000,
+                batch_size = 128,
+                n_inputs = 1,     # dim of word vector
+                n_steps = 120,    # number of words in a sentence
+                n_hidden_units = 128,
+                n_classes = 2,    # pos or neg
+                cell = 'GRU',
+                embedding=True)
+    rnn.train(data=(train_data,train_labels))
+    del rnn
+
     pass
