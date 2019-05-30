@@ -42,8 +42,7 @@ test_data = tf.keras.preprocessing.sequence.pad_sequences(test_data,
                                                        maxlen=120)
 # numpy.ndarray (25000, 120)
 
-import numpy as np
-np.savetxt("train_data.txt", train_data, fmt="%s")
-np.savetxt("train_labels.txt", train_labels, fmt="%s")
-np.savetxt("test_data.txt", test_data, fmt="%s")
-np.savetxt("test_labels.txt", test_labels, fmt="%s")
+import pickle
+f = open('data.pickle','wb')
+pickle.dump((train_data, train_labels, test_data, test_labels), f)
+f.close()
