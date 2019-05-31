@@ -9,128 +9,84 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 class RNN():
     def __init__(   self,
-                    lr = 0.001,
-                    training_iters = 50000,
-                    batch_size = 128,
-                    n_inputs = 28,
-                    n_steps = 28,
+                    n_words,
+                    seq_len,
                     n_hidden_units = 128,
-                    n_classes = 10,
-                    cell = 'GRU',
-                    embedding=False):
+                    num_layers = 1,
+                    batch_size = 128,
+                    lr = 0.001,
+                    embedding_size = 256,
+                    epochs = 20,
+                    cell = 'GRU'):
 
-        tf.set_random_seed(42)
-        self.lr = lr
-        self.training_iters = training_iters
+        self.n_words = n_words
+        self.seq_len = seq_len
+        self.n_hidden_units = n_hidden_units
+        self.num_layers = num_layers
         self.batch_size = batch_size
-        self.n_inputs = n_inputs                # word vector dim or row of pixels
-        self.n_steps = n_steps                  # number of words or image height
-        self.n_hidden_units = n_hidden_units    # neurons in hidden layer
-        self.n_classes = n_classes              # labels
+        self.lr = lr
+        self.embedding_size = embedding_size
+        self.epochs = epochs
         self.cell = cell
-        self.embedding = embedding
-        self.embedding_size = 256
         
-        self.build_model()
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+        self.g = tf.Graph()
+        with self.g.as_default():
+            tf.set_random_seed(42)
+            self.build_model()
+            self.saver = tf.train.Saver()
+            self.init_op = tf.global_variables_initializer()
+            # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+            # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
 
     def build_model(self):
-        x = tf.placeholder(tf.float32, [None, self.n_steps, self.n_inputs], name='x')
-        y = tf.placeholder(tf.float32, [None, self.n_classes], name='y')
+        tf_x = tf.placeholder(tf.int32, shape=(self.batch_size, self.seq_len), name='tf_x')
+        tf_y = tf.placeholder(tf.int32, shape=(self.batch_size), name='tf_y')
+        tf_keep_prob = tf.placeholder(tf.float32, name='tf_keep_prob')
 
-        # Define weights before cell and after cell
-        weights = {
-            'in': tf.Variable(tf.random_normal([self.n_inputs, self.n_hidden_units])),
-            'out': tf.Variable(tf.random_normal([self.n_hidden_units, self.n_classes]))
+        '''
+        Ref: https://adventuresinmachinelearning.com/recurrent-neural-networks-lstm-tutorial-tensorflow/
+        word_embeddings = tf.get_variable([vocabulary_size, embedding_size])
+        embedded_word_ids = tf.nn.embedding_lookup(word_embeddings, word_ids)
+        word_ids: a sentence represented in an integer vector.
+        '''
+        embedding = tf.Variable(
+            tf.random_uniform((self.n_words, self.embedding_size), minval=-1, maxval=1),
+            name='embedding')
+        embedded_x = tf.nn.embedding_lookup(embedding, tf_x, name='embedded_x')
+
+
+        cell_type = {
+            'SimpleRNN':tf.contrib.rnn.BasicRNNCell,
+            'GRU':      tf.contrib.rnn.GRUCell,
+            'LSTM':     tf.contrib.rnn.BasicLSTMCell
+            }
+
+        cells = tf.contrib.rnn.MultiRNNCell([
+            tf.contrib.rnn.DropoutWrapper(cell_type[self.cell](self.n_hidden_units), output_keep_prob=tf_keep_prob)
+            for i in range(self.num_layers)])
+
+        self.initial_state = tf.zero_state(self.batch_size, tf.float32)
+        print('  << initial state >>', self.initial_state)
+
+        outputs, self.final_state = tf.nn.dynamic_rnn(cells, embedded_x, initial_state=self.initial_state)
+        print('  << outputs >>', outputs)
+        print('  << final state >>', self.final_state)
+
+        logits = tf.layers.dense(inputs=outputs[:,-1], units=1, activation=None, name='logits')
+        logits = tf.squeeze(logits, name='logits_squeezed')
+        print('  << logits >>', logits)
+
+        y_prob = tf.nn.sigmoid(logits, name='prob')
+        predictions = {
+            'prob': y_prob,
+            'label': tf.cast(tf.round(y_prob), tf.int32, name='label')
         }
-        biases = {
-            'in': tf.Variable(tf.constant(0.1, shape=[self.n_hidden_units, ])),
-            'out': tf.Variable(tf.constant(0.1, shape=[self.n_classes, ]))
-        }
-
-        if self.embedding:
-            '''
-            Ref: https://adventuresinmachinelearning.com/recurrent-neural-networks-lstm-tutorial-tensorflow/
-            word_embeddings = tf.get_variable([vocabulary_size, embedding_size])
-            embedded_word_ids = tf.nn.embedding_lookup(word_embeddings, word_ids)
-            word_ids: a sentence represented in an integer vector.
-            '''
-            word_embeddings = tf.Variable(tf.random_uniform([10000, self.embedding_size], -1, 1), name='word_embeddings')
-            embedded_word_ids = tf.nn.embedding_lookup(word_embeddings, tf.cast(x, tf.int32))
-
-            # Modify the original dimension of the weights.
-            weights['in'] = tf.Variable(tf.random_normal([self.embedding_size, self.n_hidden_units]))
-
-        def build_cell(X, weights, biases):
-            # transpose the inputs shape to
-            # X ==> (batch * steps, inputs)
-            if self.embedding:
-                X = tf.reshape(X, [-1, self.embedding_size])
-            else:
-                X = tf.reshape(X, [-1, self.n_inputs])                
-
-            # X_in = (batch * steps, hidden)
-            X_in = tf.matmul(X, weights['in']) + biases['in']
-            # X_in ==> (batch, steps, hidden)
-            X_in = tf.reshape(X_in, [-1, self.n_steps, self.n_hidden_units])
+        print('  << probabilities >>', predictions)
 
 
-            if self.cell == 'SimpleRNN':
-                cell = tf.contrib.rnn.BasicRNNCell(num_units=self.n_hidden_units)   
-                # print('*****************')
-                # print(cell.state_size) # hidden
-                # print('*****************')
-
-                init_state = cell.zero_state(self.batch_size, dtype=tf.float32)
-                outputs, final_state = tf.nn.dynamic_rnn(cell, X_in, initial_state=init_state, time_major=False)
-                # print('*****************')
-                # print(outputs)          # Tensor("rnn/transpose_1:0", shape=(batch, step, hidden), dtype=float32)
-                # print(final_state)      # Tensor("rnn/while/Exit_3:0", shape=(batch, hidden), dtype=float32) 
-                # print('*****************')
-                results = tf.matmul(final_state, weights['out']) + biases['out']
-
-            elif self.cell == 'GRU':
-                cell = tf.contrib.rnn.GRUCell(num_units=self.n_hidden_units)
-                # print('*****************')
-                # print(cell.state_size) # hidden
-                # print('*****************')
-
-                init_state = cell.zero_state(self.batch_size, dtype=tf.float32)
-                outputs, final_state = tf.nn.dynamic_rnn(cell, X_in, initial_state=init_state, time_major=False)
-                # print('*****************')
-                # print(outputs)          # Tensor("rnn/transpose_1:0", shape=(batch, step, hidden), dtype=float32)
-                # print(final_state)      # Tensor("rnn/while/Exit_3:0", shape=(batch, hidden), dtype=float32) 
-                # print('*****************')
-                results = tf.matmul(final_state, weights['out']) + biases['out']
-
-            elif self.cell == 'LSTM':
-                cell = tf.contrib.rnn.BasicLSTMCell(num_units=self.n_hidden_units)
-                # print('*****************')
-                # print(cell.state_size) # LSTMStateTuple(c=hidden, m=hidden)
-                # print('*****************')
-
-                # lstm cell is divided into two parts (c_state, h_state)
-                init_state = cell.zero_state(self.batch_size, dtype=tf.float32)
-                outputs, final_state = tf.nn.dynamic_rnn(cell, X_in, initial_state=init_state, time_major=False)
-                # print('*****************')
-                # print(outputs)              # Tensor("rnn/transpose_1:0", shape=(batch, step, hidden), dtype=float32)
-                # print(final_state.h)        # Tensor("rnn/while/Exit_4:0", shape=(hidden, hidden), dtype=float32) 
-                # print(final_state.c)        # Tensor("rnn/while/Exit_3:0", shape=(hidden, hidden), dtype=float32)
-                # print(final_state[1].shape) # (hidden, hidden)
-                # print('*****************')
-                results = tf.matmul(final_state[1], weights['out']) + biases['out']
-
-            return results
-
-
-        pred = build_cell(x, weights, biases)
-        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-        self.train_op = tf.train.AdamOptimizer(self.lr).minimize(cost)
-
-        correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-        self.accuracy_op = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf_y, logits=logits))
+        train_op = tf.train.AdamOptimizer(self.lr).minimize(costm name='train_op')
 
 
     def train(self, data):
