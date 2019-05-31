@@ -89,60 +89,37 @@ class RNN():
         train_op = tf.train.AdamOptimizer(self.lr).minimize(costm name='train_op')
 
 
-    def train(self, data):
-        self.sess.run(tf.global_variables_initializer())
-        step = 0
-        while step * self.batch_size < self.training_iters:
+    def train(self, X, y):
+        with tf.Session(graph=self.g) as sess:
+            sess.run(self.init_op)
+            step = 1
 
-            # MNIST case, data=mnist
-            if self.n_classes == 10: 
-                batch_xs, batch_ys = data.train.next_batch(self.batch_size)
-                batch_xs = batch_xs.reshape([self.batch_size, self.n_steps, self.n_inputs])
-                feed = {
-                    'x:0' : batch_xs,
-                    'y:0' : batch_ys,
-                }
-                self.sess.run(self.train_op, feed_dict=feed)
-                if step % 20 == 0:
-                    print(self.sess.run(self.accuracy_op, feed_dict=feed))
+            for epoch in range(self.epochs):
+                state = sess.run(self.initial_state)
 
-            # HW
-            else:
                 batch_gen = batch_generator(
-                    data[0], # X
-                    data[1], # y
+                    X,y,
                     batch_size=self.batch_size,
-                    shuffle=True
+                    shuffle=False
                 )
                 for i, (batch_x, batch_y) in enumerate(batch_gen):
                     feed = {
-                        'x:0' : batch_x,
-                        'y:0' : batch_y,
+                        'tf_x:0': batch_x,
+                        'tf_y:0': batch_y,
+                        'tf_keep_prob:0': 0.5,
+                        self.initial_state = state 
                     }
-                    self.sess.run(self.train_op, feed_dict=feed)
+
+                    loss, _, state = sess.run(['cost:0', 'train_op', self.final_state], feed_dict=feed)
+
                     if step % 20 == 0:
-                        print(self.sess.run(self.accuracy_op, feed_dict=feed))
+                        print('Epoch: {}/{} Step: {} | Loss: {.5f}'.format(epoch+1, self.epochs, step, loss))
 
-            step += 1
+                    step += 1
 
-def one_hot(dict_size, target):
-    embedding = np.identity(dict_size, dtype=np.int32)
-    dim = len(target.shape)
+                if (epoch+1) % 10 == 0:
+                    self.saver.save(sess, "model/imdb-{}.ckpt".format(epoch))
 
-    if dim == 1:
-        result = np.zeros((len(target), dict_size))
-        for w in range(len(target)):
-            result[w,:] = embedding[target[w],:]
-        return result
-
-    elif dim == 2:
-        batch_size = target.shape[0]
-        sentence_len = target.shape[1]
-        result = np.zeros((batch_size, sentence_len, dict_size))
-        for s in range(batch_size):
-            for w in range(sentence_len):
-                result[s,w,:] = embedding[target[s,w],:]
-        return result
 
 def batch_generator(X, y, batch_size=128, shuffle=False, random_seed=42):
     idx = np.arange(y.shape[0])
