@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from tensorflow.examples.tutorials.mnist import input_data
 
 # Good ref:
@@ -28,6 +29,11 @@ class RNN():
         self.embedding_size = embedding_size
         self.epochs = epochs
         self.cell = cell
+
+        self.training_acc = []
+        self.training_loss = []
+        self.testing_acc = []
+        self.testing_loss = []
         
         self.g = tf.Graph()
         with self.g.as_default():
@@ -95,18 +101,29 @@ class RNN():
         train_op = tf.train.AdamOptimizer(self.lr).minimize(cost, name='train_op')
 
 
-    def train(self, X, y):
+        correct_predictions = tf.equal(predictions['label'], tf_y, name='correct_preds')
+        accuracy = tf.reduce_mean(
+            tf.cast(correct_predictions, tf.float32),
+            name='accuracy'
+            )
+    # preds = rnn.predict(test_data)
+    # y_true = test_labels[:len(preds)]
+    # print("Test Acc.: {:.3f}".format(np.sum(preds == y_true) / len(y_true)))
+
+    def train(self, training_set, validation_set=None):
+        X = training_set[0]
+        y = training_set[1]
+
         with tf.Session(graph=self.g) as sess:
             sess.run(self.init_op)
             acc_batch = 1 # accumulated batch number
 
             for epoch in range(self.epochs):
                 state = sess.run(self.initial_state)
+                epoch_loss = []
+                epoch_acc = []
 
-                batch_gen = batch_generator(
-                    X,y,
-                    batch_size=self.batch_size
-                )
+                batch_gen = batch_generator(X, y, batch_size=self.batch_size)
                 for i, (batch_x, batch_y) in enumerate(batch_gen):
                     feed = {
                         'tf_x:0': batch_x,
@@ -115,15 +132,50 @@ class RNN():
                         self.initial_state: state 
                     }
 
-                    loss, _, state = sess.run(['cost:0', 'train_op', self.final_state], feed_dict=feed)
+                    loss, acc, _, state = sess.run(
+                        ['cost:0', 'accuracy:0', 'train_op', self.final_state],
+                        feed_dict=feed
+                    )
+                    epoch_loss.append(loss)
+                    epoch_acc.append(acc)
 
-                    if acc_batch % 20 == 0:
-                        print('Epoch: {}/{} Acc_batch: {} | Loss: {:.5f}'.format(
-                            epoch+1, self.epochs, acc_batch, loss))
+                    if acc_batch % 25 == 0:
+                        print('Epoch: {}/{} Acc_batch: {} | Training_loss: {:.5f} Training_acc:{:.3f}'.format(
+                            epoch+1, self.epochs, acc_batch, loss, acc))
 
-                    acc_batch += 1
+                    acc_batch += 1 # count every batch
 
-                if (epoch+1) % self.epochs == 0: # save the last epoch
+                self.training_loss.append(sum(epoch_loss) / len(epoch_loss)) 
+                self.training_acc.append(sum(epoch_acc) / len(epoch_acc))
+
+                if validation_set is not None:
+                    test_X = validation_set[0]
+                    test_y = validation_set[1]
+                    batch_gen = batch_generator(test_X, test_y, batch_size=self.batch_size)
+                    epoch_loss = []
+                    epoch_acc = []
+                    for i, (batch_x, batch_y) in enumerate(batch_gen):
+                        feed = {
+                            'tf_x:0' : batch_x,
+                            'tf_y:0' : batch_y,
+                            'tf_keep_prob:0': 1.0
+                        }
+                        loss, acc = sess.run(
+                            ['cost:0', 'accuracy:0'],
+                             feed_dict=feed
+                        )
+                        epoch_loss.append(loss)
+                        epoch_acc.append(acc)
+
+                    self.testing_loss.append(sum(epoch_loss) / len(epoch_loss)) 
+                    self.testing_acc.append(sum(epoch_acc) / len(epoch_acc))
+                    foo = "Acc_batch: {}".format(acc_batch)
+                    print('Epoch: {}/{} {} | Testing_loss : {:.5f} Testing_acc :{:.3f}'.format(
+                            epoch+1, self.epochs, ' '*len(foo), self.testing_loss[-1], self.testing_acc[-1]))
+
+
+
+                if (epoch+1) % self.epochs == 0: # save the model at last epoch
                     self.saver.save(sess, "model/{}-{}.ckpt".format(self.cell, epoch))
                     print("\"{}-{}.ckpt\" saved".format(self.cell, epoch))
 
@@ -164,10 +216,23 @@ def batch_generator(X, y=None, batch_size=64):
         else:
             yield X[idx:idx+batch_size]
 
+def plot_ROC():
+    pass
+
+def plot_PRC():
+    pass
+
+def plot_AUROC():
+    pass
+
+def plot_AUPRC():
+    pass
+
 if __name__ == "__main__":
     with open('data.pickle','rb') as f:
         train_data, train_labels, test_data, test_labels = pickle.load(f)
-    # print(train_data.shape)
+
+    epochs = 5
     rnn = RNN(  n_words = 10000,
                 seq_len = 120,
                 n_hidden_units = 128,
@@ -175,12 +240,32 @@ if __name__ == "__main__":
                 batch_size = 100,
                 lr = 0.001,
                 embedding_size = 256,
-                epochs = 10,
+                epochs = epochs,
                 cell = 'GRU')
-    # rnn.train(train_data, train_labels)
+    rnn.train(training_set=(train_data, train_labels),
+        validation_set=(test_data, test_labels))
+
+
+    # Plotting
+    fig1 = plt.figure(1)
+    plt.plot(range(1,epochs+1), rnn.training_loss, label='training loss')
+    plt.plot(range(1,epochs+1), rnn.testing_loss, label='testing loss')
+    plt.xlabel('epoch')
+    plt.ylabel('Cross entropy')
+    plt.title('Learning Curve')
+    plt.legend()
+    plt.show()
+
+    fig2 = plt.figure(2)
+    plt.plot(range(1,epochs+1), rnn.training_acc, label='training acc')
+    plt.plot(range(1,epochs+1), rnn.testing_acc, label='testing acc')
+    plt.xlabel('epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy')
+    plt.legend()
 
     # Testing
-    preds = rnn.predict(test_data)
-    y_true = test_labels[:len(preds)]
-    print("Test Acc.: {:.3f}".format(np.sum(preds == y_true) / len(y_true)))
+    # preds = rnn.predict(test_data)
+    # y_true = test_labels[:len(preds)]
+    # print("Test Acc.: {:.3f}".format(np.sum(preds == y_true) / len(y_true)))
     del rnn
