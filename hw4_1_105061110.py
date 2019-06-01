@@ -35,8 +35,6 @@ class RNN():
             self.build_model()
             self.saver = tf.train.Saver()
             self.init_op = tf.global_variables_initializer()
-            # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-            # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
 
     def build_model(self):
@@ -66,84 +64,95 @@ class RNN():
             tf.contrib.rnn.DropoutWrapper(cell_type[self.cell](self.n_hidden_units), output_keep_prob=tf_keep_prob)
             for i in range(self.num_layers)])
 
-        self.initial_state = tf.zero_state(self.batch_size, tf.float32)
-        print('  << initial state >>', self.initial_state)
+        self.initial_state = cells.zero_state(self.batch_size, tf.float32)
+        # print('  << initial state >>', self.initial_state)
+        # -> shape=(128, 128) dtype=float32
 
         outputs, self.final_state = tf.nn.dynamic_rnn(cells, embedded_x, initial_state=self.initial_state)
-        print('  << outputs >>', outputs)
-        print('  << final state >>', self.final_state)
+        # print('  << outputs >>', outputs)
+        # -> shape=(128, 120, 128) dtype=float32
+        # print('  << final state >>', self.final_state)
+        # -> shape=(128, 128) dtype=float32
 
         logits = tf.layers.dense(inputs=outputs[:,-1], units=1, activation=None, name='logits')
         logits = tf.squeeze(logits, name='logits_squeezed')
-        print('  << logits >>', logits)
+        # print('  << logits >>', logits)
+        # -> shape=(128,) dtype=float32
 
         y_prob = tf.nn.sigmoid(logits, name='prob')
         predictions = {
             'prob': y_prob,
             'label': tf.cast(tf.round(y_prob), tf.int32, name='label')
         }
-        print('  << probabilities >>', predictions)
+        # print('  << probabilities >>', predictions)
+        # -> 'prob': shape=(128,) dtype=float32
+        # -> 'label': shape=(128,) dtype=float32
+        
 
-
-        cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf_y, logits=logits))
-        train_op = tf.train.AdamOptimizer(self.lr).minimize(costm name='train_op')
+        cost = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.cast(tf_y, tf.float32), logits=logits), name='cost'
+            )
+        train_op = tf.train.AdamOptimizer(self.lr).minimize(cost, name='train_op')
 
 
     def train(self, X, y):
         with tf.Session(graph=self.g) as sess:
             sess.run(self.init_op)
-            step = 1
+            acc_batch = 1 # accumulated batch number
 
             for epoch in range(self.epochs):
                 state = sess.run(self.initial_state)
 
                 batch_gen = batch_generator(
                     X,y,
-                    batch_size=self.batch_size,
-                    shuffle=False
+                    batch_size=self.batch_size
                 )
                 for i, (batch_x, batch_y) in enumerate(batch_gen):
                     feed = {
                         'tf_x:0': batch_x,
                         'tf_y:0': batch_y,
                         'tf_keep_prob:0': 0.5,
-                        self.initial_state = state 
+                        self.initial_state: state 
                     }
 
                     loss, _, state = sess.run(['cost:0', 'train_op', self.final_state], feed_dict=feed)
 
-                    if step % 20 == 0:
-                        print('Epoch: {}/{} Step: {} | Loss: {.5f}'.format(epoch+1, self.epochs, step, loss))
+                    if acc_batch % 20 == 0:
+                        print('Epoch: {}/{} Acc. batch: {} | Loss: {:.5f}'.format(
+                            epoch+1, self.epochs, acc_batch, loss))
 
-                    step += 1
+                    acc_batch += 1
 
                 if (epoch+1) % 10 == 0:
                     self.saver.save(sess, "model/imdb-{}.ckpt".format(epoch))
+                    print("\"imdb-{}.ckpt\" saved".format(epoch))
 
 
-def batch_generator(X, y, batch_size=128, shuffle=False, random_seed=42):
-    idx = np.arange(y.shape[0])
+def batch_generator(X, y=None, batch_size=64):
+    n_batches = len(X) // batch_size # floor division
+    X = X[:n_batches*batch_size] # trim the size to be the multiple of batch_size
 
-    if shuffle:
-        rng = np.random.RandomState(random_seed)
-        rng.shuffle(idx)
-        X = X[idx]
-        y = y[idx]
-    # y = one_hot(2, y)
-    for i in range(0, X.shape[0], batch_size):
-        yield (X[i:i+batch_size, :], y[i:i+batch_size])
+    if y is not None:
+        y = y[:n_batches*batch_size]
+
+    for idx in range(0, len(X), batch_size):
+        if y is not None:
+            yield X[idx:idx+batch_size], y[idx:idx+batch_size]
+        else:
+            yield X[idx:idx+batch_size]
 
 if __name__ == "__main__":
     with open('data.pickle','rb') as f:
         train_data, train_labels, test_data, test_labels = pickle.load(f)
-    print(train_data.shape)
-    rnn = RNN( lr = 0.001,
-                training_iters = 50000,
-                batch_size = 128,
-                n_inputs = 1,   # dim of word vector
-                n_steps = 120,    # number of words in a sentence
+    # print(train_data.shape)
+    rnn = RNN(  n_words = 10000,
+                seq_len = 120,
                 n_hidden_units = 128,
-                n_classes = 1,    # pos or neg
+                num_layers = 1,
+                batch_size = 100,
+                lr = 0.001,
+                embedding_size = 256,
+                epochs = 20,
                 cell = 'GRU')
     rnn.train(train_data, train_labels)
-    del lstm
+    del rnn
