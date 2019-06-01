@@ -118,15 +118,38 @@ class RNN():
                     loss, _, state = sess.run(['cost:0', 'train_op', self.final_state], feed_dict=feed)
 
                     if acc_batch % 20 == 0:
-                        print('Epoch: {}/{} Acc. batch: {} | Loss: {:.5f}'.format(
+                        print('Epoch: {}/{} Acc_batch: {} | Loss: {:.5f}'.format(
                             epoch+1, self.epochs, acc_batch, loss))
 
                     acc_batch += 1
 
-                if (epoch+1) % 10 == 0:
-                    self.saver.save(sess, "model/imdb-{}.ckpt".format(epoch))
-                    print("\"imdb-{}.ckpt\" saved".format(epoch))
+                if (epoch+1) % self.epochs == 0: # save the last epoch
+                    self.saver.save(sess, "model/{}-{}.ckpt".format(self.cell, epoch))
+                    print("\"{}-{}.ckpt\" saved".format(self.cell, epoch))
 
+
+    def predict(self, X, return_prob=False):
+        preds=[]
+        with tf.Session(graph=self.g) as sess:
+            self.saver.restore(sess, tf.train.latest_checkpoint('model/'))
+            test_state = sess.run(self.initial_state)
+            batch_gen = batch_generator(X, None, batch_size=self.batch_size)
+            
+            for i, batch_x in enumerate(batch_gen, 1):
+                feed = {
+                    'tf_x:0': batch_x,
+                    'tf_keep_prob:0': 1.0,
+                    self.initial_state: test_state 
+                }
+
+                if return_prob:
+                    pred, test_state = sess.run(['prob:0', self.final_state], feed_dict=feed)
+                else:
+                    pred, test_state = sess.run(['label:0', self.final_state], feed_dict=feed)
+
+                preds.append(pred)
+
+        return np.concatenate(preds)
 
 def batch_generator(X, y=None, batch_size=64):
     n_batches = len(X) // batch_size # floor division
@@ -152,7 +175,12 @@ if __name__ == "__main__":
                 batch_size = 100,
                 lr = 0.001,
                 embedding_size = 256,
-                epochs = 20,
+                epochs = 10,
                 cell = 'GRU')
-    rnn.train(train_data, train_labels)
+    # rnn.train(train_data, train_labels)
+
+    # Testing
+    preds = rnn.predict(test_data)
+    y_true = test_labels[:len(preds)]
+    print("Test Acc.: {:.3f}".format(np.sum(preds == y_true) / len(y_true)))
     del rnn
