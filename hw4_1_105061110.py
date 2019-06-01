@@ -218,7 +218,7 @@ def batch_generator(X, y=None, batch_size=64):
         else:
             yield X[idx:idx+batch_size]
 
-def plot_ROC(test_y, prob, name='name'):
+def plot_ROC(test_y, prob, name=None, maxlen=None):
     from sklearn.metrics import roc_auc_score
     from sklearn.metrics import roc_curve
     
@@ -233,9 +233,9 @@ def plot_ROC(test_y, prob, name='name'):
     plt.ylabel('True Positive Rate')
     plt.title('Receiver operating characteristic ({}, test)'.format(name))
     plt.legend()
-    plt.savefig("{}_ROC.jpg".format(name))
+    plt.savefig("{}_{}_ROC.jpg".format(name, maxlen))
 
-def plot_PRC(test_y, prob, name='name'):
+def plot_PRC(test_y, prob, name=None, maxlen=None):
     from sklearn.metrics import auc
     from sklearn.metrics import precision_recall_curve
 
@@ -247,60 +247,84 @@ def plot_PRC(test_y, prob, name='name'):
     plt.ylabel('Precision')
     plt.title('Precision-Recall Curve ({}, test)'.format(name))
     plt.legend()
-    plt.savefig("{}_PRC.jpg".format(name))
-    plt.show()
+    plt.savefig("{}_{}_PRC.jpg".format(name, maxlen))
 
 
-if __name__ == "__main__":
-    with open('data.pickle','rb') as f:
+def main(maxlen=120, cell='GRU'):
+    with open('maxlen-{}.pickle'.format(maxlen),'rb') as f:
         train_data, train_labels, test_data, test_labels = pickle.load(f)
 
-    # Best setting--SimpleRNN
-    # epochs = 15
-    # cell = 'SimpleRNN'
-    # rnn = RNN(  n_words = 10000,
-    #             seq_len = 120,
-    #             n_hidden_units = 128,
-    #             num_layers = 1,
-    #             batch_size = 500,
-    #             lr = 0.0005,
-    #             embedding_size = 256,
-    #             epochs = epochs,
-    #             cell = cell)
-    # rnn.train(training_set=(train_data, train_labels),
-    #     validation_set=(test_data, test_labels))
+    if cell == 'SimpleRNN':
+        if maxlen == 120:
+            epochs = 15
+            rnn = RNN(  n_words = 10000,
+                        seq_len = maxlen,
+                        n_hidden_units = 128,
+                        num_layers = 1,
+                        batch_size = 500,
+                        lr = 0.0005,
+                        embedding_size = 256,
+                        epochs = epochs,
+                        cell = cell)
+        else:
+            epochs = 15
+            rnn = RNN(  n_words = 10000,
+                        seq_len = maxlen,
+                        n_hidden_units = 128,
+                        num_layers = 1,
+                        batch_size = 500,
+                        lr = 0.008,
+                        embedding_size = 256,
+                        epochs = epochs,
+                        cell = cell)
 
-    # Best setting--GRU
-    # epochs = 10
-    # cell = 'GRU'
-    # rnn = RNN(  n_words = 10000,
-    #             seq_len = 120,
-    #             n_hidden_units = 128,
-    #             num_layers = 1,
-    #             batch_size = 250,
-    #             lr = 0.0005,
-    #             embedding_size = 256,
-    #             epochs = epochs,
-    #             cell = cell)
+    elif cell == 'GRU':
+        if maxlen == 120:
+            epochs = 10
+        else:
+            epochs = 8
+        rnn = RNN(  n_words = 10000,
+                    seq_len = maxlen,
+                    n_hidden_units = 128,
+                    num_layers = 1,
+                    batch_size = 250,
+                    lr = 0.0005,
+                    embedding_size = 256,
+                    epochs = epochs,
+                    cell = cell)
 
-    epochs = 5
-    cell = 'GRU'
-    rnn = RNN(  n_words = 10000,
-                seq_len = 120,
-                n_hidden_units = 128,
-                num_layers = 1,
-                batch_size = 500,
-                lr = 0.0005,
-                embedding_size = 256,
-                epochs = epochs,
-                cell = cell)
+    elif cell == 'LSTM':
+        if maxlen == 120:
+            epochs = 10
+            rnn = RNN(  n_words = 10000,
+                        seq_len = maxlen,
+                        n_hidden_units = 128,
+                        num_layers = 1,
+                        batch_size = 250,
+                        lr = 0.0005,
+                        embedding_size = 256,
+                        epochs = epochs,
+                        cell = cell)
+        else:
+            epochs = 20
+            rnn = RNN(  n_words = 10000,
+                        seq_len = maxlen,
+                        n_hidden_units = 128,
+                        num_layers = 1,
+                        batch_size = 500,
+                        lr = 0.002,
+                        embedding_size = 256,
+                        epochs = epochs,
+                        cell = cell)
+
+
     rnn.train(training_set=(train_data, train_labels),
         validation_set=(test_data, test_labels))
 
 
     # Plotting
 
-    if False:
+    if True:
         fig1 = plt.figure(1)
         plt.plot(range(1,epochs+1), rnn.training_loss, label='training loss')
         plt.plot(range(1,epochs+1), rnn.testing_loss, label='testing loss')
@@ -308,7 +332,7 @@ if __name__ == "__main__":
         plt.ylabel('Cross entropy')
         plt.title('Learning Curve')
         plt.legend()
-        plt.savefig("{}_loss.jpg".format(cell))
+        plt.savefig("{}_{}_loss.jpg".format(cell, maxlen))
 
         fig2 = plt.figure(2)
         plt.plot(range(1,epochs+1), rnn.training_acc, label='training acc')
@@ -317,12 +341,12 @@ if __name__ == "__main__":
         plt.ylabel('Accuracy')
         plt.title('Accuracy')
         plt.legend()
-        plt.savefig("{}_acc.jpg".format(cell))
+        plt.savefig("{}_{}_acc.jpg".format(cell, maxlen))
 
     if True:
         prob = rnn.predict(test_data, return_prob=True)
-        plot_ROC(test_labels[:len(prob)], prob, name=cell)
-        plot_PRC(test_labels[:len(prob)], prob, name=cell)
+        plot_ROC(test_labels[:len(prob)], prob, name=cell, maxlen=maxlen)
+        plot_PRC(test_labels[:len(prob)], prob, name=cell, maxlen=maxlen)
 
 
     # Testing
@@ -330,3 +354,11 @@ if __name__ == "__main__":
     # y_true = test_labels[:len(preds)]
     # print("Test Acc.: {:.3f}".format(np.sum(preds == y_true) / len(y_true)))
     del rnn
+
+if __name__ == "__main__":
+    # main(maxlen=120, cell='SimpleRNN')
+    # main(maxlen=120, cell='GRU')
+    # main(maxlen=120, cell='LSTM')
+    # main(maxlen=256, cell='SimpleRNN')
+    # main(maxlen=256, cell='GRU')
+    main(maxlen=256, cell='LSTM')
