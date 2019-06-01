@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 from tensorflow.examples.tutorials.mnist import input_data
 
 # Good ref:
-# http://colah.github.io/posts/2015-08-Understanding-LSTMs/
-# https://zhuanlan.zhihu.com/p/44424550
+# RNN illustrations: http://colah.github.io/posts/2015-08-Understanding-LSTMs/
+# RNN: https://zhuanlan.zhihu.com/p/44424550
+# AUC: https://machinelearningmastery.com/roc-curves-and-precision-recall-curves-for-classification-in-python/
+# AUC: https://www.datascienceblog.net/post/machine-learning/interpreting-roc-curves-auc/
 
 class RNN():
     def __init__(   self,
@@ -216,53 +218,112 @@ def batch_generator(X, y=None, batch_size=64):
         else:
             yield X[idx:idx+batch_size]
 
-def plot_ROC():
-    pass
+def plot_ROC(test_y, prob, name='name'):
+    from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import roc_curve
+    
+    auc = roc_auc_score(test_y, prob)
+    print("AUC: {:.3f}".format(auc))
+    
+    fpr, tpr, thresholds = roc_curve(test_y, prob)
+    plt.clf()
+    plt.plot(fpr, tpr, 'b-', label="AUC = {:.2f}".format(auc))
+    plt.plot([0, 1], [0, 1], 'r--', label='Random')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic ({}, test)'.format(name))
+    plt.legend()
+    plt.savefig("{}_ROC.jpg".format(name))
 
-def plot_PRC():
-    pass
+def plot_PRC(test_y, prob, name='name'):
+    from sklearn.metrics import auc
+    from sklearn.metrics import precision_recall_curve
 
-def plot_AUROC():
-    pass
+    precision, recall, thresholds = precision_recall_curve(test_y, prob)
+    auc = auc(recall, precision)
+    plt.clf()
+    plt.plot(recall, precision, 'b-', label="AUPRC = {:.2f}".format(auc))
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve ({}, test)'.format(name))
+    plt.legend()
+    plt.savefig("{}_PRC.jpg".format(name))
+    plt.show()
 
-def plot_AUPRC():
-    pass
 
 if __name__ == "__main__":
     with open('data.pickle','rb') as f:
         train_data, train_labels, test_data, test_labels = pickle.load(f)
 
+    # Best setting--SimpleRNN
+    # epochs = 15
+    # cell = 'SimpleRNN'
+    # rnn = RNN(  n_words = 10000,
+    #             seq_len = 120,
+    #             n_hidden_units = 128,
+    #             num_layers = 1,
+    #             batch_size = 500,
+    #             lr = 0.0005,
+    #             embedding_size = 256,
+    #             epochs = epochs,
+    #             cell = cell)
+    # rnn.train(training_set=(train_data, train_labels),
+    #     validation_set=(test_data, test_labels))
+
+    # Best setting--GRU
+    # epochs = 10
+    # cell = 'GRU'
+    # rnn = RNN(  n_words = 10000,
+    #             seq_len = 120,
+    #             n_hidden_units = 128,
+    #             num_layers = 1,
+    #             batch_size = 250,
+    #             lr = 0.0005,
+    #             embedding_size = 256,
+    #             epochs = epochs,
+    #             cell = cell)
+
     epochs = 5
+    cell = 'GRU'
     rnn = RNN(  n_words = 10000,
                 seq_len = 120,
                 n_hidden_units = 128,
                 num_layers = 1,
-                batch_size = 100,
-                lr = 0.001,
+                batch_size = 500,
+                lr = 0.0005,
                 embedding_size = 256,
                 epochs = epochs,
-                cell = 'GRU')
+                cell = cell)
     rnn.train(training_set=(train_data, train_labels),
         validation_set=(test_data, test_labels))
 
 
     # Plotting
-    fig1 = plt.figure(1)
-    plt.plot(range(1,epochs+1), rnn.training_loss, label='training loss')
-    plt.plot(range(1,epochs+1), rnn.testing_loss, label='testing loss')
-    plt.xlabel('epoch')
-    plt.ylabel('Cross entropy')
-    plt.title('Learning Curve')
-    plt.legend()
-    plt.show()
 
-    fig2 = plt.figure(2)
-    plt.plot(range(1,epochs+1), rnn.training_acc, label='training acc')
-    plt.plot(range(1,epochs+1), rnn.testing_acc, label='testing acc')
-    plt.xlabel('epoch')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy')
-    plt.legend()
+    if False:
+        fig1 = plt.figure(1)
+        plt.plot(range(1,epochs+1), rnn.training_loss, label='training loss')
+        plt.plot(range(1,epochs+1), rnn.testing_loss, label='testing loss')
+        plt.xlabel('epoch')
+        plt.ylabel('Cross entropy')
+        plt.title('Learning Curve')
+        plt.legend()
+        plt.savefig("{}_loss.jpg".format(cell))
+
+        fig2 = plt.figure(2)
+        plt.plot(range(1,epochs+1), rnn.training_acc, label='training acc')
+        plt.plot(range(1,epochs+1), rnn.testing_acc, label='testing acc')
+        plt.xlabel('epoch')
+        plt.ylabel('Accuracy')
+        plt.title('Accuracy')
+        plt.legend()
+        plt.savefig("{}_acc.jpg".format(cell))
+
+    if True:
+        prob = rnn.predict(test_data, return_prob=True)
+        plot_ROC(test_labels[:len(prob)], prob, name=cell)
+        plot_PRC(test_labels[:len(prob)], prob, name=cell)
+
 
     # Testing
     # preds = rnn.predict(test_data)
