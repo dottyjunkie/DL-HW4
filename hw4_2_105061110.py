@@ -1,117 +1,163 @@
+import time
 import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import tensorflow.contrib.legacy_seq2seq as seq2seq
+from sklearn.model_selection import train_test_split
 
-# Good ref:
-# utf-8-sig: https://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
+
+class en2fr():
+	def __init__(self):
+		with open('en.txt', 'r', encoding='utf-8') as f:
+			self.en_lines = f.readlines()
+		with open('en.txt', 'r', encoding='utf-8') as f:
+			self.en_texts = f.read().split()
+
+		with open('fr.txt', 'r', encoding='utf-8-sig') as f:
+			self.fr_lines = f.readlines()
+		with open('fr.txt', 'r', encoding='utf-8-sig') as f:
+			self.fr_texts = f.read().split()
+
+		self.x = [line.split() for line in self.en_lines]
+		self.y = [line.split() for line in self.fr_lines]
+		self.epochs = 10
+		self.batch_size = 1120
+		self.n_hidden = 256
+		self.embed_size = 16 # original dim: 228 & 357
+
+		self.word2int()
+		self.build_model()
+		self.saver = tf.train.Saver()
+		self.X_train, self.X_test, self.y_train, self.y_test = \
+			train_test_split(self.x, self.y, test_size=0.2, random_state=42)
+		
+
+	def word2int(self):
+		unique_word = set(self.en_texts)
+		self.char2numX = {word:i for i, word in enumerate(unique_word)}
+		self.char2numX['<PAD>'] = len(self.char2numX)
+		self.num2charX = dict(enumerate(self.char2numX))
+		max_len_x = max([len(words) for words in self.x])
+		self.x = [[self.char2numX[word] for word in words] + [self.char2numX['<PAD>']]*(max_len_x - len(words)) for words in self.x]
+		self.x = np.array(self.x)
 
 
-def print_word2int(lines, word2int):
-	for line in lines:
-		line = '<SOL> ' + line[:-1] + ' <EOL>'
-		line = line.split()
-		# print(line)
-		line2int = np.array([word2int[word] for word in line], dtype=np.int32)
-		word_len = []
-		for i, word in enumerate(line):
-			word_len.append(len(word))
-			diff = len(str(line2int[i])) - len(word)
-			if diff <= 0:
-				n_space = 1
-			else:
-				n_space = diff + 1
-			print(word + ' '*n_space, end='')
-		print()
-		for i, code in enumerate(line2int):
-			print('{:<{width}}'.format(code, width=word_len[i]), end=' ')
-		print()
+		unique_word = set(self.fr_texts)
+		self.char2numY = {word:i for i, word in enumerate(unique_word)}
+		self.char2numY['<GO>'] = len(self.char2numY)
+		self.char2numY['<PAD>'] = len(self.char2numY)
+		self.char2numY['<EOS>'] = len(self.char2numY)
+		self.num2charY = dict(enumerate(self.char2numY))
+		max_len_y = max([len(words) for words in self.y])
+		self.y = [[self.char2numY['<GO>']] + [self.char2numY[word] for word in words] + [self.char2numY['<EOS>']] for words in self.y]
+		self.y = [words + [self.char2numY['<PAD>']]*(max_len_y + 2 - len(words)) for words in self.y]
+		# print(' '.join([self.num2charY[word] for word in self.y[0]]))
+		self.y = np.array(self.y)
 
-def word_encoding(lan, n_lines=0):
-	if lan == 'fr':
-		encoding = 'utf-8-sig'
-	else:
-		encoding = 'utf-8'
+		self.x_seq_length = len(self.x[0])
+		self.y_seq_length = len(self.y[0])- 1
 
-	with open('{}.txt'.format(lan), 'r', encoding=encoding) as f:
-		lines = f.readlines() # 137760 lines
+	def batch_data(self, x, y, y_len, batch_size):
+	    shuffle = np.random.permutation(len(x))
+	    start = 0
+	    x = x[shuffle]
+	    y = y[shuffle]
+	    y_len = y_len[shuffle]
+	    while start + batch_size <= len(x):
+	        yield x[start:start+batch_size], y[start:start+batch_size], y_len[start:start+batch_size]
+	        start += batch_size
 
-	with open('{}.txt'.format(lan), 'r', encoding=encoding) as f:
-		text = f.read()
+	def build_model(self):
+		tf.reset_default_graph()
+		self.sess = tf.Session()
 
-	words = set(text.split())
-	tags = ('<SOL>', '<EOL>')
-	words.update(tags)
-	word2int = {word:i for i, word in enumerate(words)}
-	int2word = dict(enumerate(words))
-	print('n_words: {}'.format(len(word2int)))
-	print_word2int(lines[:n_lines], word2int)
-	return word2int, int2word
+		inputs = tf.placeholder(tf.int32, (None, self.x_seq_length), 'inputs')
+		outputs = tf.placeholder(tf.int32, (None, None), 'outputs')
+		targets = tf.placeholder(tf.int32, (None, None), 'targets')
+		targets_length = tf.placeholder(tf.int32, (self.batch_size,), 'targets_length')
 
-def char_encoding():
-	with open('en.txt', 'r', encoding='utf-8') as f:
-		en_lines = f.readlines()
-		# print('num_lines:{}'.format(len(en_lines)))
+		# Embedding layers
+		input_embedding = tf.Variable(tf.random_uniform((len(self.char2numX), self.embed_size), -1.0, 1.0), name='enc_embedding')
+		output_embedding = tf.Variable(tf.random_uniform((len(self.char2numY), self.embed_size), -1.0, 1.0), name='dec_embedding')
+		date_input_embed = tf.nn.embedding_lookup(input_embedding, inputs)
+		date_output_embed = tf.nn.embedding_lookup(output_embedding, outputs)
 
-	with open('fr.txt', 'r', encoding='utf-8-sig') as f:
-		fr_lines = f.readlines()
-		# print('num_lines:{}'.format(len(fr_lines)))
+		with tf.variable_scope("encoding") as encoding_scope:
+		    # lstm_enc = tf.contrib.rnn.BasicLSTMCell(self.n_hidden)
+		    lstm_enc = tf.contrib.rnn.GRUCell(self.n_hidden)
+		    _, last_state = tf.nn.dynamic_rnn(lstm_enc, inputs=date_input_embed, dtype=tf.float32)
 
-	input_texts = []
-	target_texts = []
-	input_chars = set()
-	target_chars = set()
-	for en_line, fr_line in zip(en_lines, fr_lines):
-		input_text = en_line
-		target_text = '\t' + fr_line + '\n'
-		input_texts.append(en_line) # list of lines
-		target_texts.append(target_text)
+		with tf.variable_scope("decoding") as decoding_scope:
+		    # lstm_dec = tf.contrib.rnn.BasicLSTMCell(self.n_hidden)
+		    lstm_dec = tf.contrib.rnn.GRUCell(self.n_hidden)
+		    dec_outputs, _ = tf.nn.dynamic_rnn(lstm_dec, inputs=date_output_embed, initial_state=last_state)
 
-		for char in input_text:
-			if char not in input_chars:
-				input_chars.add(char)
+		self.logits = tf.contrib.layers.fully_connected(dec_outputs, num_outputs=len(self.char2numY), activation_fn=None) 
+		with tf.name_scope("optimization"):
+		    # masks = tf.ones([self.batch_size, self.y_seq_length])
+		    masks = tf.sequence_mask(targets_length, self.y_seq_length, dtype=tf.float32)
+		    self.loss = tf.contrib.seq2seq.sequence_loss(self.logits, targets, weights=masks, name='loss')
+		    self.optimizer = tf.train.AdamOptimizer(5e-3)
+		    self.train_op = self.optimizer.minimize(self.loss, name='train_op')
 
-		for char in target_text:
-			if char not in target_chars:
-				target_chars.add(char)
+		    # Gradient Clipping
+		    # optimizer = tf.train.AdamOptimizer(2e-3)
+		    # gradients = optimizer.compute_gradients(loss)
+		    # capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
+		    # train_op = optimizer.apply_gradients(capped_gradients)
 
-	input_chars = sorted(list(input_chars))
-	target_chars = sorted(list(target_chars))
-	num_encoder_tokens = len(input_chars)
-	num_decoder_tokens = len(target_chars)
-	max_encoder_seq_length = max([len(txt) for txt in input_texts])
-	max_decoder_seq_length = max([len(txt) for txt in target_texts])
-	print('Number of samples:', len(input_texts))
-	print('Number of unique input tokens:', num_encoder_tokens)
-	print('Number of unique output tokens:', num_decoder_tokens)
-	print('Max sequence length for inputs:', max_encoder_seq_length)
-	print('Max sequence length for outputs:', max_decoder_seq_length)
+	def train(self):
+		y_len_train = np.array([ len([code for code in line  if code != 356]) for line in self.y_train])
+		y_len_test = np.array([ len([code for code in line  if code != 356]) for line in self.y_test])
 
-	input_token_index = dict(
-	    [(char, i) for i, char in enumerate(input_chars)])
-	target_token_index = dict(
-	    [(char, i) for i, char in enumerate(target_chars)])
-	
-	encoder_input_data = np.zeros(
-	    (len(input_texts), max_encoder_seq_length, num_encoder_tokens),
-	    dtype='float32')
-	decoder_input_data = np.zeros(
-	    (len(input_texts), max_decoder_seq_length, num_decoder_tokens),
-	    dtype='float32')
-	decoder_target_data = np.zeros(
-	    (len(input_texts), max_decoder_seq_length, num_decoder_tokens),
-	    dtype='float32')
+		self.sess.run(tf.global_variables_initializer())
+		for epoch_i in range(self.epochs):
+		    start_time = time.time()
+		    for batch_i, (source_batch, target_batch, y_len) in enumerate(self.batch_data(
+		    	self.X_train, self.y_train, y_len_train, self.batch_size)):
+		        _, batch_loss, batch_logits = self.sess.run([self.train_op, self.loss, self.logits],
+		            feed_dict = {
+		             'inputs:0': source_batch,
+		             'outputs:0': target_batch[:, :-1],
+		             'targets:0': target_batch[:, 1:],
+		             'targets_length:0': y_len
+		             })
 
-	for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
-	    for t, char in enumerate(input_text):
-	        encoder_input_data[i, t, input_token_index[char]] = 1. # one-hot encoding
-	    for t, char in enumerate(target_text):
-	        # decoder_target_data is ahead of decoder_input_data by one timestep
-	        decoder_input_data[i, t, target_token_index[char]] = 1.
-	        if t > 0:
-	            # decoder_target_data will be ahead by one timestep
-	            # and will not include the start character.
-	            decoder_target_data[i, t - 1, target_token_index[char]] = 1.
+		    accuracy = np.mean(batch_logits.argmax(axis=-1) == target_batch[:,1:])
+		    print('Epoch {:3} Loss: {:>6.4f} Accuracy: {:>6.4f} Epoch duration: {:>6.3f}s'.format(
+		    	epoch_i, batch_loss, accuracy, time.time() - start_time))
+
+		self.saver.save(self.sess, "model/{}.ckpt".format('seq2seq'))
+		print("model/{}.ckpt".format('seq2seq'))
+
+		sample_output = True
+		if sample_output:
+			source_batch, target_batch, y_len = next(self.batch_data(self.X_test, self.y_test, y_len_test, self.batch_size))
+			dec_input = np.zeros((len(source_batch), 1)) + self.char2numY['<GO>']
+			for i in range(self.y_seq_length):
+			    batch_logits = self.sess.run(self.logits,
+			                feed_dict = {
+			                 'inputs:0': source_batch,
+			                 'outputs:0': dec_input,
+			                 'targets_length:0': y_len
+			                })
+			    prediction = batch_logits[:,-1].argmax(axis=-1)
+			    dec_input = np.hstack([dec_input, prediction[:,None]])
+
+			accuracy = np.mean(dec_input[:,1:] == target_batch[:,1:])
+			print('Accuracy on test set is: {:>6.4f}'.format(accuracy))
+			num_preds = 10
+			source_chars = [[self.num2charX[l] for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
+			dest_chars = [[self.num2charY[l] for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
+			for date_in, date_out in zip(source_chars, dest_chars):
+			    print(' '.join(date_in))
+			    print('=> '+' '.join(date_out))
+			    print()
+
+	def translate(self):
+		pass
 
 if __name__ == '__main__':
-	# n_lines = 1
-	# en_word2int, en_int2word = word_encoding(lan='en', n_lines=n_lines)
-	# fr_word2int, fr_int2word = word_encoding(lan='fr', n_lines=n_lines)
-	char_encoding()
+	translator = en2fr()
+	translator.train()
+

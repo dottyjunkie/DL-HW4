@@ -1,20 +1,9 @@
 # Ref: https://github.com/sachinruk/deepschool.io/blob/master/DL-Keras_Tensorflow/Lesson%2019%20-%20Seq2Seq%20-%20Date%20translator%20-%20Solutions.ipynb
-import numpy as np
-import matplotlib.pyplot as plt
-
-import random
-import json
-import os
 import time
-
-from faker import Faker
-import babel
-from babel.dates import format_date
-
+import numpy as np
 import tensorflow as tf
-
+import matplotlib.pyplot as plt
 import tensorflow.contrib.legacy_seq2seq as seq2seq
-
 from sklearn.model_selection import train_test_split
 
 
@@ -52,15 +41,17 @@ x = np.array(x)
 
 char2numY['<GO>'] = len(char2numY)
 char2numY['<PAD>'] = len(char2numY)
+char2numY['<EOS>'] = len(char2numY)
 # print('n_char2numY: {}'.format(len(char2numY))) # 357
 num2charY = dict(enumerate(char2numY))
 max_len_y = max([len(words) for words in y])
-y = [[char2numY['<GO>']] + [char2numY[word] for word in words] for words in y]
+y = [[char2numY['<GO>']] + [char2numY[word] for word in words] + [char2numY['<EOS>']] for words in y]
 # y = [[char2numY['<PAD>']]*(max_len_y + 1 - len(words)) + words for words in y]
-y = [words + [char2numY['<PAD>']]*(max_len_y + 1 - len(words)) for words in y]
-# print(' '.join([num2charY[word] for word in y[0]]))
+y = [words + [char2numY['<PAD>']]*(max_len_y + 2 - len(words)) for words in y]
+print(' '.join([num2charY[word] for word in y[0]]))
 y = np.array(y)
 # print(y.shape)
+
 
 x_seq_length = len(x[0])
 y_seq_length = len(y[0])- 1
@@ -137,7 +128,7 @@ y_len_train = np.array([ len([code for code in line  if code != 356]) for line i
 y_len_test = np.array([ len([code for code in line  if code != 356]) for line in y_test])
 
 sess.run(tf.global_variables_initializer())
-epochs = 30
+epochs = 50
 for epoch_i in range(epochs):
     start_time = time.time()
     for batch_i, (source_batch, target_batch, y_len) in enumerate(batch_data(X_train, y_train, y_len_train, batch_size)):
