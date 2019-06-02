@@ -79,7 +79,7 @@ def batch_data(x, y, y_len, batch_size):
 
 
 epochs = 2 # 2
-batch_size = 3360
+batch_size = 1120
 nodes = 100 # 32 < 64
 embed_size = 16 # original dim: 228 & 357
 
@@ -114,7 +114,7 @@ with tf.name_scope("optimization"):
     masks = tf.sequence_mask(targets_length, y_seq_length, dtype=tf.float32)
     loss = tf.contrib.seq2seq.sequence_loss(logits, targets, weights=masks)
     # optimizer = tf.train.RMSPropOptimizer(1e-3)
-    optimizer = tf.train.AdamOptimizer(1e-3)
+    optimizer = tf.train.AdamOptimizer(2e-3)
     # train_op = optimizer.minimize(loss)
 
     # Gradient Clipping
@@ -136,7 +136,7 @@ y_len_train = np.array([ len([code for code in line  if code != 356]) for line i
 y_len_test = np.array([ len([code for code in line  if code != 356]) for line in y_test])
 
 sess.run(tf.global_variables_initializer())
-epochs = 10
+epochs = 50
 for epoch_i in range(epochs):
     start_time = time.time()
     for batch_i, (source_batch, target_batch, y_len) in enumerate(batch_data(X_train, y_train, y_len_train, batch_size)):
@@ -148,14 +148,6 @@ for epoch_i in range(epochs):
              targets_length: y_len
              }
         )
-    
-    # sample1 = batch_logits.argmax(axis=-1)[0, :]
-    # ans1 = target_batch[0,1:]
-    # source_chars = [num2charY[code] for code in sample1]
-    # dest_chars = [num2charY[code] for code in ans1]
-    # print(' '.join(source_chars))
-    # print(' '.join(dest_chars))
-
 
     true_target_batch = target_batch.copy()
     true_target_batch[true_target_batch == 356] = -1
