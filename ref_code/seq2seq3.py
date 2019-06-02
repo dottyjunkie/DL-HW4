@@ -80,7 +80,7 @@ def batch_data(x, y, y_len, batch_size):
 
 epochs = 2 # 2
 batch_size = 1120
-nodes = 256 # 32 < 64 < 100
+nodes = 256 # 32 < 64 < 100 < 256
 embed_size = 16 # original dim: 228 & 357
 
 tf.reset_default_graph()
@@ -114,13 +114,14 @@ with tf.name_scope("optimization"):
     masks = tf.sequence_mask(targets_length, y_seq_length, dtype=tf.float32)
     loss = tf.contrib.seq2seq.sequence_loss(logits, targets, weights=masks)
     # optimizer = tf.train.RMSPropOptimizer(1e-3)
-    optimizer = tf.train.AdamOptimizer(2e-3)
-    # train_op = optimizer.minimize(loss)
+    optimizer = tf.train.AdamOptimizer(5e-3)
+    train_op = optimizer.minimize(loss)
 
     # Gradient Clipping
-    gradients = optimizer.compute_gradients(loss)
-    capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
-    train_op = optimizer.apply_gradients(capped_gradients)
+    # optimizer = tf.train.AdamOptimizer(2e-3)
+    # gradients = optimizer.compute_gradients(loss)
+    # capped_gradients = [(tf.clip_by_value(grad, -5., 5.), var) for grad, var in gradients if grad is not None]
+    # train_op = optimizer.apply_gradients(capped_gradients)
 
 # print(dec_outputs.get_shape().as_list()) # [None, None, 32]
 # print(last_state[0].get_shape().as_list()) # [None, 32]
@@ -136,7 +137,7 @@ y_len_train = np.array([ len([code for code in line  if code != 356]) for line i
 y_len_test = np.array([ len([code for code in line  if code != 356]) for line in y_test])
 
 sess.run(tf.global_variables_initializer())
-epochs = 50
+epochs = 30
 for epoch_i in range(epochs):
     start_time = time.time()
     for batch_i, (source_batch, target_batch, y_len) in enumerate(batch_data(X_train, y_train, y_len_train, batch_size)):
@@ -150,12 +151,14 @@ for epoch_i in range(epochs):
         )
 
     true_target_batch = target_batch.copy()
-    true_target_batch[true_target_batch == 356] = -1
-    result = batch_logits.argmax(axis=-1) == true_target_batch[:,1:]
-    # result = batch_logits.argmax(axis=-1) == target_batch[:,1:]
-    accuracy = np.mean(result)
-    print('Epoch {:3} Loss: {:>6.4f} Accuracy: {:>6.4f} Epoch duration: {:>6.3f}s'.format(
-    	epoch_i, batch_loss, accuracy, time.time() - start_time))
+    true_target_batch[true_target_batch == 356] = -356
+    result = batch_logits.argmax(axis=-1) - true_target_batch[:,1:]
+    n_correct = (result == 0).sum()
+    n_valid = (result != 356*2).sum()
+    accuracy = n_correct / n_valid
+    old_accuracy = np.mean(batch_logits.argmax(axis=-1) == target_batch[:,1:])
+    print('Epoch {:3} Loss: {:>6.4f} Accuracy: {:>6.4f} OldAccuracy: {:>6.4f} Epoch duration: {:>6.3f}s'.format(
+    	epoch_i, batch_loss, accuracy, old_accuracy, time.time() - start_time))
 
 
 source_batch, target_batch, y_len = next(batch_data(X_test, y_test, y_len_test, batch_size))
@@ -170,8 +173,15 @@ for i in range(y_seq_length):
     )
     prediction = batch_logits[:,-1].argmax(axis=-1)
     dec_input = np.hstack([dec_input, prediction[:,None]])
-target_batch[target_batch == 356] = -1
-print('Accuracy on test set is: {:>6.4f}'.format(np.mean(dec_input[:,1:] == target_batch[:,1:])))
+
+true_target_batch = target_batch.copy()
+true_target_batch[true_target_batch == 356] = -356
+result = dec_input[:,1:] - true_target_batch[:,1:]
+n_correct = (result == 0).sum()
+n_valid = (result != 356*2).sum()
+accuracy = n_correct / n_valid
+old_accuracy = np.mean(dec_input[:,1:] == target_batch[:,1:])
+print('Accuracy on test set is: {:>6.4f}, {:>6.4f}'.format(accuracy, old_accuracy))
 num_preds = 10
 source_chars = [[num2charX[l] for l in sent if num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
 dest_chars = [[num2charY[l] for l in sent if num2charY[l]!="<PAD>" and num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
