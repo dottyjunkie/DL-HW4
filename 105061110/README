@@ -1,0 +1,5 @@
+First execute hw4_1_preprocess.py, it will produce the preprocessed data named 
+maxlen-120.pickle and maxlen-256.pickle.
+
+Dependency:
+pickle
