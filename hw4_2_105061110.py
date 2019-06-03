@@ -28,6 +28,11 @@ class en2fr():
 		self.batch_size = 1120
 		self.n_hidden = 256
 		self.embed_size = 16 # original dim: 228 & 357
+        
+		self.training_acc = []
+		self.training_loss = []
+		self.testing_acc = []
+		self.testing_loss = []
 
 		self.word2int()
 		tf.reset_default_graph()
@@ -132,11 +137,31 @@ class en2fr():
 		             })
 
 		    accuracy = np.mean(batch_logits.argmax(axis=-1) == target_batch[:,1:])
+		    self.training_loss.append(batch_loss)
+		    self.training_acc.append(accuracy)
 		    print('Epoch {:3} Loss: {:>6.4f} Accuracy: {:>6.4f} Epoch duration: {:>6.3f}s'.format(
-		    	epoch_i, batch_loss, accuracy, time.time() - start_time))
+		    	epoch_i, batch_loss, accuracy, time.time() - start_time), end=' ')
+
+		    validate = True
+		    if validate:
+			    for batch_i, (source_batch, target_batch, y_len) in enumerate(self.batch_data(
+			    	self.X_test, self.y_test, y_len_test, self.batch_size)):
+			        _, batch_loss, batch_logits = self.sess.run([self.train_op, self.loss, self.logits],
+			            feed_dict = {
+			             'inputs:0': source_batch,
+			             'outputs:0': target_batch[:, :-1],
+			             'targets:0': target_batch[:, 1:],
+			             'targets_length:0': y_len
+			             })
+
+			    accuracy = np.mean(batch_logits.argmax(axis=-1) == target_batch[:,1:])
+			    self.testing_loss.append(batch_loss)
+			    self.testing_acc.append(accuracy)
+			    print('Valid.Loss: {:>6.4f} Valid.Accuracy: {:>6.4f}'.format(batch_loss, accuracy))
 
 		self.saver.save(self.sess, 'model/seq2seq-{}.ckpt'.format(self.epochs))
 		print('Saved model/seq2seq-{}.ckpt'.format(self.epochs))
+		self._translate()
 
 		sample_output = True
 		if sample_output:
@@ -152,18 +177,31 @@ class en2fr():
 			    prediction = batch_logits[:,-1].argmax(axis=-1)
 			    dec_input = np.hstack([dec_input, prediction[:,None]])
 
-			accuracy = np.mean(dec_input[:,1:] == target_batch[:,1:])
-			print('Accuracy on test set is: {:>6.4f}'.format(accuracy))
-			self.translate()
-			# num_preds = 2
-			# source_chars = [[self.num2charX[l] for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
-			# dest_chars = [[self.num2charY[l] for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
-			# for date_in, date_out in zip(source_chars, dest_chars):
-			#     print(' '.join(date_in))
-			#     print('=> '+' '.join(date_out))
-			#     print()
+			# accuracy = np.mean(dec_input[:,1:] == target_batch[:,1:])
+			# print('Accuracy on test set is: {:>6.4f}'.format(accuracy))
+			
+			num_preds = 2
+			source_chars = [[self.num2charX[l] for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
+			source_ints = [[l for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
+			dest_chars = [[self.num2charY[l] for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
+			dest_ints = [[l for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
 
-	def translate(self):
+			for en_char, en_int, fr_char, fr_int in zip(source_chars, source_ints, dest_chars, dest_ints):
+				print('Source (English)')
+				print('  Word Indices: ', end='')
+				print(en_int)
+				print('  English Words: ', end='')
+				print(en_char)
+				print()
+				print('Translation (French)')
+				print('  Word Indices: ', end='')
+				print([int(n) for n in fr_int])
+				print('  French Words: ', end='')
+				print(fr_char)
+				print()
+
+
+	def _translate(self):
 		# self.saver.restore(self.sess, 'model/seq2seq-{}.ckpt'.format(30))
 		# print('Loaded model/seq2seq-{}.ckpt'.format(30))
 		
@@ -175,10 +213,7 @@ class en2fr():
 		
 		while len(x) < self.batch_size:
 			x.append(x[-1])
-		x = np.array(x)
-
-		# source_batch = next(self.batch_data(x=x, batch_size=self.batch_size))
-		source_batch = x
+		source_batch = np.array(x)
 
 		dec_input = np.zeros((len(source_batch), 1)) + self.char2numY['<GO>']
 		for i in range(self.y_seq_length):
@@ -189,31 +224,55 @@ class en2fr():
 		                })
 		    prediction = batch_logits[:,-1].argmax(axis=-1)
 		    dec_input = np.hstack([dec_input, prediction[:,None]])
-		num_preds = 10
+
+		num_preds = 100
 		source_chars = [[self.num2charX[l] for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
 		source_ints = [[l for l in sent if self.num2charX[l]!="<PAD>"] for sent in source_batch[:num_preds]]
 		dest_chars = [[self.num2charY[l] for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
 		dest_ints = [[l for l in sent if self.num2charY[l]!="<PAD>" and self.num2charY[l]!="<GO>"] for sent in dec_input[:num_preds, 1:]]
 
-		for en_char, en_int, fr_char, fr_int in zip(source_chars, source_ints, dest_chars, dest_ints):
-			print('Source (English)')
-			print('  Word Indices: ', end='')
-			print(en_int)
-			print('  English Words: ', end='')
-			print(en_char)
-			print()
-			print('Translation (French)')
-			print('  Word Indices: ', end='')
-			print([int(n) for n in fr_int])
-			print('  French Words: ', end='')
-			print(fr_char)
-			print()
+		with open('test_105061110.txt', 'w', encoding='utf-8-sig') as f:
+			for en_char, fr_char in zip(source_chars, dest_chars):
+				line = ' '.join(fr_char) + '\n'
+				f.write(line)
+
+
+		printRes = False
+		if printRes:
+			for en_char, en_int, fr_char, fr_int in zip(source_chars, source_ints, dest_chars, dest_ints):
+				print('Source (English)')
+				print('  Word Indices: ', end='')
+				print(en_int)
+				print('  English Words: ', end='')
+				print(en_char)
+				print()
+				print('Translation (French)')
+				print('  Word Indices: ', end='')
+				print([int(n) for n in fr_int])
+				print('  French Words: ', end='')
+				print(fr_char)
+				print()
+
 
 if __name__ == '__main__':
 	translator = en2fr()
 	translator.train()
+	if True:
+		fig1 = plt.figure(1)
+		plt.plot(range(1,translator.epochs+1), translator.training_loss, label='training loss')
+		plt.plot(range(1,translator.epochs+1), translator.testing_loss, label='testing loss')
+		plt.xlabel('epoch')
+		plt.ylabel('Cross entropy')
+		plt.title('Learning Curve')
+		plt.legend()
+		plt.savefig("{}_loss.jpg".format('seq2seq'))
 
-	# translator.translate()
-
-
+		fig2 = plt.figure(2)
+		plt.plot(range(1,translator.epochs+1), translator.training_acc, label='training acc')
+		plt.plot(range(1,translator.epochs+1), translator.testing_acc, label='testing acc')
+		plt.xlabel('epoch')
+		plt.ylabel('Accuracy')
+		plt.title('Accuracy')
+		plt.legend()
+		plt.savefig("{}_acc.jpg".format('seq2seq'))
 

@@ -1,0 +1,100 @@
+﻿new jersey est parfois calme pendant l' automne , et il est neigeux en avril . <EOS> . <EOS> . <EOS>
+les états-unis est généralement froid en juillet , et il gèle habituellement en novembre . <EOS> . <EOS> . <EOS> .
+california est généralement calme en mars , et il est généralement chaud en juin . <EOS> . <EOS> . <EOS> .
+les états-unis est parfois doux en juin , et il fait froid en septembre . <EOS> . <EOS> . <EOS> .
+votre moins aimé fruit est le raisin , mais mon moins aimé est la pomme . <EOS> . <EOS> . <EOS>
+son fruit préféré est l'orange , mais mon préféré est le raisin . <EOS> . <EOS> . <EOS> . <EOS>
+paris est relaxant en décembre , mais il est généralement froid en juillet . <EOS> . <EOS> . <EOS> . <EOS>
+new jersey est occupé au printemps , et il est jamais chaude en mars . <EOS> . <EOS> . <EOS> .
+notre fruit est moins aimé le citron , mais mon moins aimé est le raisin . <EOS> . <EOS> . <EOS>
+les états-unis est parfois occupé en janvier , et il est parfois chaud en novembre . <EOS> . <EOS> . <EOS>
+la chaux est son moins aimé des fruits , mais la banane est mon moins aimé. <EOS> . <EOS> . <EOS>
+il a vu un vieux camion jaune . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+inde est pluvieux en juin , et il est parfois chaud en novembre . <EOS> . <EOS> . <EOS> . <EOS>
+ce chat était mon animal le plus aimé . <EOS> . <EOS> . <EOS> . <EOS> . <EOS> .
+il n'aime pamplemousse , citrons verts et les citrons . <EOS> . <EOS> . <EOS> . <EOS> merveilleux
+son fruit est moins aimé le citron , mais son moins aimé est le pamplemousse . <EOS> . <EOS> . <EOS>
+californie ne fait jamais froid en février , mais il est parfois le gel en juin . <EOS> . <EOS> . <EOS>
+chine est généralement agréable en automne , et il est généralement calme en octobre . <EOS> . <EOS> . <EOS>
+paris est jamais le gel en novembre , mais il est merveilleux en octobre . <EOS> . <EOS> . <EOS>
+les états-unis est jamais pluvieux en janvier , mais il est parfois doux en octobre . <EOS> . <EOS> . <EOS>
+chine est généralement agréable en novembre , et il est jamais tranquille en octobre . <EOS> . <EOS> beau merveilleux
+les états-unis est jamais agréable en février , mais il est parfois agréable en avril . <EOS> . <EOS> . <EOS>
+l' inde est jamais occupé à l'automne , et il est doux au printemps . <EOS> . <EOS> . <EOS> .
+paris est doux pendant l' été , mais il est généralement occupé en avril . <EOS> . <EOS> . <EOS> .
+france ne fait jamais froid en septembre , et il est neigeux en octobre . <EOS> . <EOS> . <EOS> .
+californie ne fait jamais froid au mois de mai , et il est parfois frisquet en mars . <EOS> . <EOS> .
+il déteste les citrons , les raisins et les mangues . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+leur fruit préféré est la mangue , mais notre préféré est la poire . <EOS> . <EOS> . <EOS> calme
+la france est parfois calme au mois de mai , et il est jamais froid en août . <EOS> . <EOS> .
+paris est jamais agréable en septembre , et il est beau à l' automne . <EOS> . <EOS> . <EOS> .
+il déteste les pommes , les pêches et les raisins . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+la californie est le gel habituellement en décembre , et il est occupé en avril . <EOS> . <EOS> . <EOS>
+votre animal le plus redouté est que le requin . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+paris est généralement humide au mois d' août , et il est jamais sec en novembre . <EOS> . <EOS> . <EOS>
+paris est généralement beau en septembre , et il est généralement enneigée en novembre . <EOS> . <EOS> . <EOS> .
+les états-unis est jamais humide en janvier , mais il est généralement chaud en octobre . <EOS> . <EOS> . <EOS>
+nous aimons les oranges , les mangues et les raisins . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+ils aiment les poires , les pommes et les mangues . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+elle déteste ce petit camion rouge . <EOS> . <EOS> . <EOS> merveilleux . <EOS> calme
+le pamplemousse est mon fruit le plus cher , mais la banane est la plus aimée . <EOS> . <EOS> . <EOS>
+la france est la neige au mois de mai , et il est jamais trop de monde à l' automne . <EOS> .
+chine est généralement doux pendant l' hiver , mais il est jamais occupé en février . <EOS> . <EOS> . <EOS>
+chine est jamais agréable en juillet , mais il est généralement enneigée au printemps . <EOS> . <EOS> calme l'école août
+californie est occupé au mois de novembre , mais il pleut à l' automne . <EOS> . <EOS> . <EOS> .
+chine est chaud au printemps , et il est parfois froid en février . <EOS> . <EOS> . <EOS> . <EOS>
+californie est généralement beau pendant l' hiver , mais il est jamais occupé en février . <EOS> . <EOS> . <EOS>
+france est merveilleux au mois de novembre , mais il est parfois chaud en septembre . <EOS> . <EOS> . <EOS>
+l' inde est généralement agréable en novembre , mais il est jamais relaxant en juillet . <EOS> . <EOS> . <EOS>
+les états-unis ne sont jamais gel pendant l' automne , mais il est jamais occupé en juin . <EOS> . <EOS> .
+paris est parfois chaud en juin , mais il est généralement chaud en juillet . <EOS> . <EOS> . <EOS> .
+paris est jamais chaude pendant l' été , et il est généralement doux en hiver . <EOS> . <EOS> . <EOS>
+elle n'aimait pas une voiture jaune rouillée . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+la france est généralement calme en novembre , mais il est parfois chaud en février . <EOS> . <EOS> . <EOS>
+new jersey est jamais humide au mois de novembre , et il est doux au mois d' août . <EOS> . <EOS>
+nous aimons les pêches , les poires et les fraises . <EOS> . <EOS> . <EOS> merveilleux . <EOS>
+l'orange est la moins aimé des fruits , mais le pamplemousse est leur moins aimé . <EOS> . <EOS> . <EOS>
+chine est jamais pluvieux en novembre , et il est calme en janvier . <EOS> . <EOS> . <EOS>
+chine est relaxant au mois de mars , mais il est parfois enneigée en septembre . <EOS> . <EOS> . <EOS>
+paris est merveilleux au mois de mars , mais il est généralement agréable en juin . <EOS> . <EOS> . <EOS>
+new jersey est froid au cours de l' automne , et il est parfois agréable au printemps . <EOS> . <EOS> .
+la californie est jamais le gel en octobre , mais il est généralement calme en juin . <EOS> . <EOS> . <EOS>
+new jersey est le gel pendant l' hiver , mais il est parfois merveilleux en janvier . <EOS> . <EOS> . <EOS>
+j'aime les raisins , les poires et les fraises . <EOS> . <EOS> . <EOS> . <EOS> merveilleux l'école
+le citron est mon fruit le plus aimé , mais la fraise est notre plus aimé . <EOS> . <EOS> . <EOS>
+chine est généralement sec en mars , mais il est agréable en novembre . <EOS> . <EOS> . <EOS>
+paris est agréable en décembre , mais il est jamais agréable en novembre . <EOS> . <EOS> . <EOS>
+chine est le gel en juillet , mais il est relaxant en janvier . <EOS> . <EOS> . <EOS>
+la pomme est notre fruit préféré moins , mais l'orange est son moins préféré . <EOS> . <EOS> . <EOS> .
+il déteste les raisins , le pamplemousse et les bananes . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+il déteste les pommes , les mangues et les fraises . <EOS> . <EOS> . <EOS> . <EOS>
+chine est chaud en juillet , mais il est jamais agréable en janvier . <EOS> . <EOS> . <EOS> . <EOS>
+l' inde est généralement sec en avril , et il gèle en février . <EOS> . <EOS> . <EOS> . <EOS>
+elle va aux états-unis l' été prochain . <EOS> . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+la france est parfois pluvieux en février , et il est généralement calme au printemps . <EOS> . <EOS> . <EOS>
+je prévois de visiter la californie en mai prochain . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+california est jamais humide au mois de novembre , et il est parfois agréable en septembre . <EOS> . <EOS> . <EOS>
+ils aiment les citrons , citrons verts et le pamplemousse . <EOS> . <EOS> . <EOS> . <EOS>
+les états-unis est jamais belle en mars , et il est relaxant habituellement en été . <EOS> . <EOS> . <EOS>
+les éléphants étaient ses animaux les plus redoutés . <EOS> . <EOS> . <EOS> . <EOS> . <EOS> .
+la fraise est leur fruit préféré moins , mais la pomme est notre moins préféré . <EOS> . <EOS> . <EOS>
+ils vont en france en juin prochain . <EOS> . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+il aime les fraises , les oranges et les citrons verts . <EOS> . <EOS> . <EOS> . <EOS>
+california est jamais agréable pendant l' hiver , et il est parfois merveilleux en décembre . <EOS> . <EOS> . <EOS>
+la pomme est notre fruit préféré moins , mais la mangue est leur moins préférée . <EOS> . <EOS> . <EOS>
+elle aime les fraises , les oranges et les bananes . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+californie est beau en janvier , et il est agréable en février . <EOS> . <EOS> . <EOS> . <EOS>
+ils n'aiment pas les raisins , mangues et citrons verts . <EOS> . <EOS> . <EOS> . <EOS> .
+elle déteste les citrons , les raisins et les oranges . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+notre fruit préféré moins est la banane , mais votre moins préféré est le raisin . <EOS> . <EOS> . <EOS>
+californie ne fait jamais froid en décembre , mais il est habituellement chaud en mai . <EOS> . <EOS> . <EOS>
+california est jamais occupé en février , et il est généralement chaud en juin . <EOS> . <EOS> . <EOS> .
+les états-unis est parfois belle au mois de novembre , et il est jamais pluvieux en mars . <EOS> . <EOS> .
+new jersey est parfois chaud en mars , et il est beau à l' automne . <EOS> . <EOS> . <EOS>
+le pamplemousse est notre fruit préféré moins , mais l'orange est votre préféré moins . <EOS> . <EOS> . <EOS>
+i comme le pamplemousse , citrons verts , et les poires . <EOS> . <EOS> . <EOS> . <EOS> .
+elle déteste les citrons , les fraises et les raisins . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+paris est généralement froid à l'automne , mais il est parfois pluvieux en juillet . <EOS> . <EOS> . <EOS> .
+elle aime les mangues , les pommes et les bananes . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+elle conduit le vieux camion jaune . <EOS> . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
+nous aimons les pêches , les mangues et les oranges . <EOS> . <EOS> . <EOS> . <EOS> . <EOS>
